@@ -11,21 +11,70 @@ library(readxl)
 
 ## Probelm 1
 
-The code chunk below clean the Mr.trash wheel dataset
+Clean the Mr.trash wheel dataset by omit non-data & note entries, omit non-dumpster-specific rows, give reasonable names, and round sports balls to integer
 
 ```{r}
+# import mr.trash dataset and omit note entries
 mr_trashwheel_df <- 
   read_excel("data/Trash-Wheel-Collection-Totals-8-6-19.xlsx", 
              sheet = "Mr. Trash Wheel",
-             range = "A2:N408") %>% # import mr.trash dataset and omit note entries
-  select(-Month) %>% # omit non-data entries
-  drop_na() %>% # omit non-dumpster-specific rows
-  janitor::clean_names() %>% # give resonable names
+             range = "A2:N408") %>% 
+  # omit non-data entries
+  select(-Month) %>% 
+  # omit non-dumpster-specific rows
+  drop_na() %>% 
+  # give reasonable names
+  janitor::clean_names() %>% 
+  # round sports balls
   mutate(sports_balls = round(sports_balls))
 ```
 
+Import the 2018 & 2019 precipitation dataset
 
+```{r}
+# import 2018 precipitation dataset and omit note entries and NA entries
+precipitation_2018 <-
+  read_excel("data/Trash-Wheel-Collection-Totals-8-6-19.xlsx", 
+             sheet = "2018 Precipitation",
+             range = "A2:B14")  
 
+# import 2019 precipitation dataset and omit note entries and NA entries
+precipitation_2019 <-
+  read_excel("data/Trash-Wheel-Collection-Totals-8-6-19.xlsx", 
+             sheet = "2019 Precipitation",
+             range = "A2:B8")  
+```
 
+Combine two dataframe, add a new variable "year", and convert month number to character
 
+```{r}
+# create function to convert month number to character
+my.month.name <- Vectorize(function(n) c("January", "February", "March", 
+                                         "April", "May", "June", "July", 
+                                         "August", "September", "October",
+                                         "November", "December")[n])
+
+precipitation_df <- 
+  bind_rows(precipitation_2018, precipitation_2019) %>% 
+  mutate("year" = c(rep(2018, 12), rep(2019,6) ),
+         Month = my.month.name(Month)) %>% 
+  relocate(year) %>% 
+  janitor::clean_names()
+```
+
+**Descriptions of the above datasets**
+
+There are 344 observations in Mr.trashwheel dataset.
+Variable "dumpster" is denoted by numbers range from 1 to 344.
+Variable "date" is coded as year-month-day. For example, `r mr_trashwheel_df[3,3]`.
+All other variables are coded as numbers.
+ 
+There are 18 observations in combined 2018 & 2019 precipitation dataset.
+Variable "year" consists of 2018 and 2019.
+Variable "month" consists of all twelve month in character
+The total precipitation, denoted by variable "total", range from `r min(pull(precipitation_df, total))` to `r max(pull(precipitation_df, total))`
+
+Total precipitation in 2018 was `r sum(subset(precipitation_df, year == 2018)$total)`.
+
+The median number of sports balls in a dumpster in 2017 was `r median(subset(mr_trashwheel_df, year == 2017)$sports_balls)`.
 
