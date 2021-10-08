@@ -6,7 +6,9 @@ output: github_document
 
 ```{r, echo = FALSE, message=FALSE}
 library(tidyverse)
+library(ggridges)
 library(readxl)
+library(dplyr)
 ```
 
 ## Probelm 1
@@ -19,12 +21,16 @@ mr_trashwheel_df <-
   read_excel("data/Trash-Wheel-Collection-Totals-7-2021-sept.xlsx", 
              sheet = "Mr. Trash Wheel",
              range = "A2:N408") %>% 
+  
   # omit non-data entries
   select(-Month) %>% 
+  
   # omit non-dumpster-specific rows
   drop_na() %>% 
+  
   # give reasonable names
   janitor::clean_names() %>% 
+  
   # round sports balls
   mutate(sports_balls = round(sports_balls))
 ```
@@ -49,10 +55,10 @@ Combine two dataframe, add a new variable "year", and convert month number to ch
 
 ```{r}
 # create function to convert month number to character
-my.month.name <- Vectorize(function(n) c("January", "February", "March", 
-                                         "April", "May", "June", "July", 
-                                         "August", "September", "October",
-                                         "November", "December")[n])
+my.month.name <- Vectorize(function(n) c("january", "february", "narch", 
+                                         "april", "may", "june", "july", 
+                                         "august", "september", "october",
+                                         "november", "december")[n])
 
 precipitation_df <- 
   bind_rows(precipitation_2018, precipitation_2019) %>% 
@@ -79,4 +85,157 @@ Total precipitation in 2018 was `r sum(subset(precipitation_df, year == 2018)$to
 The median number of sports balls in a dumpster in 2017 was `r median(subset(mr_trashwheel_df, year == 2017)$sports_balls)`.
 
 ## Probelm 2
+
+Clean the data in pols-month.csv
+  
+```{r}
+pols_month_df <- 
+  
+  read_csv("data/pols-month.csv") %>% 
+  janitor::clean_names() %>% 
+  separate(mon, into = c("year", "month", "day"), "-") 
+
+#remove day, prez_dem and prez_gop
+pols_month_df <- 
+  subset(pols_month_df, select = -c(day, prez_dem, prez_gop)) %>% 
+  
+  # convert month to name use function defined in problem 1
+  mutate(
+    month = str_remove(month, "^0+"), # remove leading 0
+    month = as.numeric(month), 
+    month = my.month.name(month)
+    ) %>% 
+  
+  pivot_longer(
+    gov_gop:rep_dem,
+    names_to = "president",
+    #names_prefix = "gov_"
+    values_to = "pol_value"
+  ) 
+
+```
+
+Clean the data in snp.csv
+
+```{r}
+snp_df <- 
+  read_csv("data/snp.csv") %>% 
+  janitor::clean_names() %>% 
+  separate(date, into = c("month", "day", "year"), "/") %>% 
+  mutate(
+    month = as.numeric(month),
+    year = as.numeric(year),
+    year = ifelse(year > 90, year + 1900, year + 2000),
+    month = my.month.name(month),
+    ) %>% 
+  relocate(year, month, day) %>% 
+  rename(snp = close)
+
+#remove day 
+snp_df <- subset(snp_df, select = -day)
+
+```
+
+Tidy the unemployment data
+
+```{r}
+
+unemployment_df <- 
+  read_csv("data/unemployment.csv") %>% 
+  janitor::clean_names()
+
+# renaming month
+unemployment_df <- rename(unemployment_df, 
+                          january = jan,
+                          february = feb,
+                          march = mar,
+                          april = apr,
+                          may = may,
+                          june = jun,
+                          july = jul,
+                          august = aug,
+                          september = sep,
+                          october = oct,
+                          november = nov,
+                          december = dec) %>% 
+  
+  pivot_longer(
+    january:december,
+    names_to = "month",
+    values_to = "unemployment"
+  ) 
+  
+```
+
+Join the datasets by merging snp into pols, and merging unemployment into the result.
+
+```{r}
+pol_snp <- merge(pols_month_df, snp_df , by = c("year", "month")) 
+
+pol_snp_unemployment <- merge(pol_snp, unemployment_df , by = c("year", "month")) 
+
+```
+
+**Description of dataset**
+
+The pols_month_df dataset has `r `dim(pols_month_df)[1]` rows and  `r `dim(pols_month_df)[2]` columns. The years in this dataset range from `r min(pull(pols_month_df, year))` to `r max(pull(pols_month_df, year))`. The variable "president" include character gop and dem, and the variable pol_value range from `r min(pull(pols_month_df, pol_value))` to `r max(pull(pols_month_df, pol_value))`.
+
+The snp_df dataset has `r `dim(snp_df)[1]` rows and  `r `dim(snp_df)[2]` columns. The years in this dataset range from `r min(pull(snp_df, year))` to `r max(pull(snp_df, year))`. The variable "snp" range from `r min(pull(snp_df, snp))` to `r max(pull(snp_df, snp))`.
+
+The unemployment_df dataset has `r `dim(unemployment_df)[1]` rows and  `r `dim(unemployment_df)[2]` columns. The years in this dataset range from `r min(pull(unemployment_df, year))` to `r max(pull(unemployment_df, year))`. The variable "snp" range from `r min(pull(unemployment_df, unemployment))` to `r max(pull(unemployment_df, unemployment))`.
+
+## Probelm 3
+
+Clean the Popular_Baby_Names.csv
+
+```{r}
+babynames_df <- 
+  read_csv("data/Popular_Baby_Names.csv") %>% 
+  janitor::clean_names() %>% 
+  
+  # remove repeated rows
+  distinct(ethnicity, childs_first_name, .keep_all = TRUE) %>% 
+  
+  # convert every word in dataframe lowercase
+  mutate(gender = tolower(gender),
+         ethnicity = tolower(ethnicity),
+         childs_first_name = tolower(childs_first_name)
+          )
+
+```
+Produce table showing the rank in popularity of the name “Olivia” as a female baby name over time
+
+```{r}
+olivia_df = filter(babynames_df, childs_first_name == "olivia", gender == "female") 
+
+olivia_df = subset(olivia_df, select = -c(gender, childs_first_name, count))
+```
+Produce table showing the most popular name among male children over time.
+
+```{r}
+popular_df = filter(babynames_df, rank == "1", gender == "male") 
+
+popular_df = subset(popular_df, select = -c(gender, rank, count))
+
+```
+
+Scatter Plot
+
+```{r}
+male_white_nonhis = filter(babynames_df, year_of_birth == 2016, 
+                         ethnicity == "white non hispanic", 
+                         gender == "male") 
+
+male_white_nonhis %>% 
+  ggplot(aes(x = rank, y = childs_first_name)) + 
+  geom_point(alpha = .5)
+
+
+
+```
+
+
+
+
+
 
