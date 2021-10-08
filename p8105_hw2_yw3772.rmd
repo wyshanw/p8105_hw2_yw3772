@@ -16,7 +16,7 @@ Clean the Mr.trash wheel dataset by omit non-data & note entries, omit non-dumps
 ```{r}
 # import mr.trash dataset and omit note entries
 mr_trashwheel_df <- 
-  read_excel("data/Trash-Wheel-Collection-Totals-8-6-19.xlsx", 
+  read_excel("data/Trash-Wheel-Collection-Totals-7-2021-sept.xlsx", 
              sheet = "Mr. Trash Wheel",
              range = "A2:N408") %>% 
   # omit non-data entries
@@ -34,15 +34,15 @@ Import the 2018 & 2019 precipitation dataset
 ```{r}
 # import 2018 precipitation dataset and omit note entries and NA entries
 precipitation_2018 <-
-  read_excel("data/Trash-Wheel-Collection-Totals-8-6-19.xlsx", 
+  read_excel("data/Trash-Wheel-Collection-Totals-7-2021-sept.xlsx", 
              sheet = "2018 Precipitation",
              range = "A2:B14")  
 
 # import 2019 precipitation dataset and omit note entries and NA entries
 precipitation_2019 <-
-  read_excel("data/Trash-Wheel-Collection-Totals-8-6-19.xlsx", 
+  read_excel("data/Trash-Wheel-Collection-Totals-7-2021-sept.xlsx", 
              sheet = "2019 Precipitation",
-             range = "A2:B8")  
+             range = "A2:B14")  
 ```
 
 Combine two dataframe, add a new variable "year", and convert month number to character
@@ -56,7 +56,7 @@ my.month.name <- Vectorize(function(n) c("January", "February", "March",
 
 precipitation_df <- 
   bind_rows(precipitation_2018, precipitation_2019) %>% 
-  mutate("year" = c(rep(2018, 12), rep(2019,6) ),
+  mutate("year" = c(rep(2018, 12), rep(2019,12) ),
          Month = my.month.name(Month)) %>% 
   relocate(year) %>% 
   janitor::clean_names()
@@ -77,4 +77,6 @@ The total precipitation, denoted by variable "total", range from `r min(pull(pre
 Total precipitation in 2018 was `r sum(subset(precipitation_df, year == 2018)$total)`.
 
 The median number of sports balls in a dumpster in 2017 was `r median(subset(mr_trashwheel_df, year == 2017)$sports_balls)`.
+
+## Probelm 2
 
