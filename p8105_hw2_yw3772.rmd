@@ -66,6 +66,7 @@ precipitation_df <-
          Month = my.month.name(Month)) %>% 
   relocate(year) %>% 
   janitor::clean_names()
+
 ```
 
 **Descriptions of the above datasets**
@@ -122,27 +123,29 @@ snp_df <-
   read_csv("data/snp.csv") %>% 
   janitor::clean_names() %>% 
   separate(date, into = c("month", "day", "year"), "/") %>% 
+  rename(snp = close) %>% 
   mutate(
     month = as.numeric(month),
     year = as.numeric(year),
     year = ifelse(year > 90, year + 1900, year + 2000),
     month = my.month.name(month),
     ) %>% 
-  relocate(year, month, day) %>% 
-  rename(snp = close)
+  relocate(year, month, day)
+  
 
 #remove day 
 snp_df <- subset(snp_df, select = -day)
 
 ```
 
-Tidy the unemployment data
+Clean the unemployment data
 
 ```{r}
 
 unemployment_df <- 
   read_csv("data/unemployment.csv") %>% 
-  janitor::clean_names()
+  janitor::clean_names() %>% 
+  na.omit(unemployment_df) #omit NA rows
 
 # renaming month
 unemployment_df <- rename(unemployment_df, 
@@ -171,18 +174,17 @@ Join the datasets by merging snp into pols, and merging unemployment into the re
 
 ```{r}
 pol_snp <- merge(pols_month_df, snp_df , by = c("year", "month")) 
-
 pol_snp_unemployment <- merge(pol_snp, unemployment_df , by = c("year", "month")) 
 
 ```
 
 **Description of dataset**
 
-The pols_month_df dataset has `r `dim(pols_month_df)[1]` rows and  `r `dim(pols_month_df)[2]` columns. The years in this dataset range from `r min(pull(pols_month_df, year))` to `r max(pull(pols_month_df, year))`. The variable "president" include character gop and dem, and the variable pol_value range from `r min(pull(pols_month_df, pol_value))` to `r max(pull(pols_month_df, pol_value))`.
+The pols_month_df dataset has `r dim(pols_month_df)[1]` rows and  `r dim(pols_month_df)[2]` columns. The years in this dataset range from `r min(pull(pols_month_df, year))` to `r max(pull(pols_month_df, year))`. The variable "president" include character gop and dem, and the variable pol_value range from `r min(pull(pols_month_df, pol_value))` to `r max(pull(pols_month_df, pol_value))`.
 
-The snp_df dataset has `r `dim(snp_df)[1]` rows and  `r `dim(snp_df)[2]` columns. The years in this dataset range from `r min(pull(snp_df, year))` to `r max(pull(snp_df, year))`. The variable "snp" range from `r min(pull(snp_df, snp))` to `r max(pull(snp_df, snp))`.
+The snp_df dataset has `r dim(snp_df)[1]` rows and  `r dim(snp_df)[2]` columns. The years in this dataset range from `r min(pull(snp_df, year))` to `r max(pull(snp_df, year))`. The variable "snp" range from `r min(pull(snp_df, snp))` to `r max(pull(snp_df, snp))`.
 
-The unemployment_df dataset has `r `dim(unemployment_df)[1]` rows and  `r `dim(unemployment_df)[2]` columns. The years in this dataset range from `r min(pull(unemployment_df, year))` to `r max(pull(unemployment_df, year))`. The variable "snp" range from `r min(pull(unemployment_df, unemployment))` to `r max(pull(unemployment_df, unemployment))`.
+The unemployment_df dataset has `r dim(unemployment_df)[1]` rows and  `r dim(unemployment_df)[2]` columns. The years in this dataset range from `r min(pull(unemployment_df, year))` to `r max(pull(unemployment_df, year))`. The variable "snp" range from `r min(pull(unemployment_df, unemployment))` to `r max(pull(unemployment_df, unemployment))`.
 
 ## Probelm 3
 
@@ -202,21 +204,26 @@ babynames_df <-
          childs_first_name = tolower(childs_first_name)
           )
 
+# show the resulting datafram
+babynames_df
 ```
 Produce table showing the rank in popularity of the name “Olivia” as a female baby name over time
 
 ```{r}
 olivia_df = filter(babynames_df, childs_first_name == "olivia", gender == "female") 
-
 olivia_df = subset(olivia_df, select = -c(gender, childs_first_name, count))
+
+# show the resulting datafram
+olivia_df
 ```
 Produce table showing the most popular name among male children over time.
 
 ```{r}
 popular_df = filter(babynames_df, rank == "1", gender == "male") 
-
 popular_df = subset(popular_df, select = -c(gender, rank, count))
 
+# show the resulting datafram
+popular_df
 ```
 
 Scatter Plot
